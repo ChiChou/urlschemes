@@ -15,6 +15,7 @@ Compile from console, or use Xcode.
 2018-01-25 19:13:16.189 scheme[49119:8943832] 	com.apple.iChat (/Applications/Messages.app)
 2018-01-25 19:13:16.189 scheme[49119:8943832] dash:
 2018-01-25 19:13:16.189 scheme[49119:8943832] 	com.kapeli.dashdoc (/Applications/Dash.app)
+...
 ```
 
 ## Windows
