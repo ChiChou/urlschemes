@@ -24,7 +24,7 @@ int main()
 	DWORD cbSecurityDescriptor;
 	FILETIME ftLastWriteTime;
 
-	HKEY hKey, hSubKey;
+	HKEY hKey;
 	auto status = RegOpenKeyEx(HKEY_CLASSES_ROOT, NULL, NULL,
 		KEY_QUERY_VALUE | KEY_READ, &hKey);
 	 
@@ -71,11 +71,9 @@ int main()
 			_tprintf(_T("%ls: "), achKey);
 			_sntprintf_s(achCommandKey, MAX_KEY_LENGTH, _T("%ls\\shell\\open\\command"), achKey);
 
-			status = RegOpenKeyEx(HKEY_CLASSES_ROOT, achCommandKey, NULL, KEY_QUERY_VALUE | KEY_READ, &hSubKey);
 			cchValue = MAX_KEY_LENGTH;
-			if (status == ERROR_SUCCESS &&
-				RegGetValue(HKEY_CLASSES_ROOT, achCommandKey, _T(""), RRF_RT_REG_SZ, NULL, achValue, &cchValue) == ERROR_SUCCESS) {
-				RegCloseKey(hSubKey);
+			status = RegGetValue(HKEY_CLASSES_ROOT, achCommandKey, _T(""), RRF_RT_REG_SZ, NULL, achValue, &cchValue);
+			if (status == ERROR_SUCCESS) {
 				_tprintf(_T("%ls"), achValue);
 			}
 			_tprintf(_T("\n"));
