@@ -74,7 +74,8 @@ int main()
 			status = RegOpenKeyEx(HKEY_CLASSES_ROOT, achCommandKey, NULL, KEY_QUERY_VALUE | KEY_READ, &hSubKey);
 			cchValue = MAX_KEY_LENGTH;
 			if (status == ERROR_SUCCESS &&
-				RegGetValue(HKEY_CLASSES_ROOT, achCommandKey, _T(""), RRF_RT_REG_SZ, NULL, achValue, &cchValue) == 0) {
+				RegGetValue(HKEY_CLASSES_ROOT, achCommandKey, _T(""), RRF_RT_REG_SZ, NULL, achValue, &cchValue) == ERROR_SUCCESS) {
+				RegCloseKey(hSubKey);
 				_tprintf(_T("%ls"), achValue);
 			}
 			_tprintf(_T("\n"));
