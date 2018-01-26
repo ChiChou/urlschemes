@@ -1,6 +1,3 @@
-// ShellExec.cpp: 定义控制台应用程序的入口点。
-//
-
 #include "stdafx.h"
 #include <tchar.h>
 #include <windows.h>
@@ -30,8 +27,8 @@ int main()
 	HKEY hKey, hSubKey;
 	auto status = RegOpenKeyEx(HKEY_CLASSES_ROOT, NULL, NULL,
 		KEY_QUERY_VALUE | KEY_READ, &hKey);
-
-	if (!SUCCEEDED(status)) {
+	 
+	if (status != ERROR_SUCCESS) {
 		_tprintf(_T("Failed to open key"));
 		return -1;
 	}
@@ -69,14 +66,14 @@ int main()
 		status = RegEnumKeyEx(hKey, i, achKey, &cbName, NULL, NULL, NULL, &ftLastWriteTime);
 
 		cchValue = MAX_KEY_LENGTH;
-		if (SUCCEEDED(status) && RegGetValue(HKEY_CLASSES_ROOT, achKey, _T("URL Protocol"),
+		if (status == ERROR_SUCCESS && RegGetValue(HKEY_CLASSES_ROOT, achKey, _T("URL Protocol"),
 			RRF_RT_REG_SZ, NULL, achValue, &cchValue) == 0) {
 			_tprintf(_T("%ls: "), achKey);
 			_sntprintf_s(achCommandKey, MAX_KEY_LENGTH, _T("%ls\\shell\\open\\command"), achKey);
 
 			status = RegOpenKeyEx(HKEY_CLASSES_ROOT, achCommandKey, NULL, KEY_QUERY_VALUE | KEY_READ, &hSubKey);
 			cchValue = MAX_KEY_LENGTH;
-			if (SUCCEEDED(status) &&
+			if (status == ERROR_SUCCESS &&
 				RegGetValue(HKEY_CLASSES_ROOT, achCommandKey, _T(""), RRF_RT_REG_SZ, NULL, achValue, &cchValue) == 0) {
 				_tprintf(_T("%ls"), achValue);
 			}
