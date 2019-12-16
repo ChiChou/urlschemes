@@ -3,31 +3,80 @@
   then run `./schemes`
 */
 
-#import <Foundation/Foundation.h>
 #import <AppKit/AppKit.h>
+#import <Foundation/Foundation.h>
 
 #include <stdio.h>
 
 extern OSStatus _LSCopySchemesAndHandlerURLs(CFArrayRef *outSchemes, CFArrayRef *outApps);
 extern OSStatus _LSCopyAllApplicationURLs(CFArrayRef *theList);
 
+int main(int argc, const char *argv[]) {
+  @autoreleasepool {
+    CFArrayRef schemes = NULL;
+    CFArrayRef apps = NULL;
 
-int main(int argc, const char * argv[]) {
-    @autoreleasepool {
-        CFArrayRef schemes;
-        CFArrayRef apps;
-        NSWorkspace *workspace = [NSWorkspace sharedWorkspace];
-        _LSCopySchemesAndHandlerURLs(&schemes, &apps);
-        for (CFIndex i = 0, count = CFArrayGetCount(schemes); i < count; i++) {
-            CFStringRef scheme = CFArrayGetValueAtIndex(schemes, i);
-            CFArrayRef handlers = LSCopyAllHandlersForURLScheme(scheme);
-            printf("-+--= %s\n", [(__bridge NSString *)scheme UTF8String]);
-            for (CFIndex j = 0, bundle_count = CFArrayGetCount(handlers); j < bundle_count; j++) {
-                CFStringRef handler = CFArrayGetValueAtIndex(handlers, j);
-                NSString *bundle = [workspace absolutePathForAppBundleWithIdentifier:(__bridge NSString *)handler];
-                printf(" |--= %s (%s)\n", [(__bridge NSString *)handler UTF8String], [bundle UTF8String]);
-            }
+    NSArray *args = [[NSProcessInfo processInfo] arguments];
+    BOOL safariOnly = [args containsObject:@"--safari"];
+    BOOL appleOnly = [args containsObject:@"--apple"];
+
+    // Safari.framework __ZZL32urlSchemesToOpenWithoutPromptingvE21whitelistedURLSchemes
+    NSArray *safariAllowes = @[
+      @"x-apple-helpbasic",
+      @"itms",
+      @"rdar",
+      @"itms-bookss",
+      @"radar",
+      @"ts",
+      @"applenewss",
+      @"radr",
+      @"applenews",
+      @"itms-books",
+      @"udoc",
+      @"itmss",
+      @"ibooks",
+      @"adir",
+      @"macappstore",
+      @"icloud-sharing",
+      @"help",
+      @"macappstores",
+      @"st",
+      @"itunes",
+      @"x-radar"
+    ];
+
+    NSWorkspace *workspace = [NSWorkspace sharedWorkspace];
+    _LSCopySchemesAndHandlerURLs(&schemes, &apps);
+    NSMutableArray *handlersForUrl = [[NSMutableArray alloc] init];
+    for (CFIndex i = 0, count = CFArrayGetCount(schemes); i < count; i++) {
+      CFStringRef scheme = CFArrayGetValueAtIndex(schemes, i);
+      NSString *str = (__bridge NSString *)scheme;
+      if (safariOnly && ![safariAllowes containsObject:str])
+        continue;
+
+#pragma clang diagnostic push
+#pragma clang diagnostic ignored "-Wdeprecated-declarations"
+      CFArrayRef handlers = LSCopyAllHandlersForURLScheme(scheme);
+#pragma clang diagnostic pop
+
+      [handlersForUrl removeAllObjects];
+      for (CFIndex j = 0, bundle_count = CFArrayGetCount(handlers); j < bundle_count; j++) {
+        CFStringRef handler = CFArrayGetValueAtIndex(handlers, j);
+        NSString *bundleId = (__bridge NSString *)handler;
+        // naive check
+        if (appleOnly && ![bundleId hasPrefix:@"com.apple."])
+          continue;
+        [handlersForUrl addObject:bundleId];
+      }
+
+      if ([handlersForUrl count]) {
+        printf("-+-= %s\n", [(__bridge NSString *)scheme UTF8String]);
+        for (NSString *bundleId in handlersForUrl) {
+          NSString *path = [workspace absolutePathForAppBundleWithIdentifier:bundleId];
+          printf(" |-= %s (%s)\n", [bundleId UTF8String], [path UTF8String]);
         }
+      }
     }
-    return 0;
+  }
+  return 0;
 }
