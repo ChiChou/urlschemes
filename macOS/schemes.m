@@ -17,53 +17,33 @@ int main(int argc, const char *argv[]) {
     CFArrayRef apps = NULL;
 
     NSArray *args = [[NSProcessInfo processInfo] arguments];
-    BOOL safariOnly = [args containsObject:@"--safari"];
     BOOL appleOnly = [args containsObject:@"--apple"];
 
-    // Safari.framework __ZZL32urlSchemesToOpenWithoutPromptingvE21whitelistedURLSchemes
-    NSArray *safariAllowes = @[
-      @"x-apple-helpbasic",
-      @"itms",
-      @"rdar",
-      @"itms-bookss",
-      @"radar",
-      @"ts",
-      @"applenewss",
-      @"radr",
-      @"applenews",
-      @"itms-books",
-      @"udoc",
-      @"itmss",
-      @"ibooks",
-      @"adir",
-      @"macappstore",
-      @"icloud-sharing",
-      @"help",
-      @"macappstores",
-      @"st",
-      @"itunes",
-      @"x-radar"
-    ];
-
     NSWorkspace *workspace = [NSWorkspace sharedWorkspace];
-    _LSCopySchemesAndHandlerURLs(&schemes, &apps);
+    OSStatus status = _LSCopySchemesAndHandlerURLs(&schemes, &apps);
+
+    if (status != noErr) {
+      fprintf(stderr, "Unable to retrive URL information. Exiting");
+      abort();
+    }
+
     NSMutableArray *handlersForUrl = [[NSMutableArray alloc] init];
     for (CFIndex i = 0, count = CFArrayGetCount(schemes); i < count; i++) {
       CFStringRef scheme = CFArrayGetValueAtIndex(schemes, i);
       NSString *str = (__bridge NSString *)scheme;
-      if (safariOnly && ![safariAllowes containsObject:str])
-        continue;
 
 #pragma clang diagnostic push
 #pragma clang diagnostic ignored "-Wdeprecated-declarations"
       CFArrayRef handlers = LSCopyAllHandlersForURLScheme(scheme);
 #pragma clang diagnostic pop
 
+      if (!handlers) continue;
+
       [handlersForUrl removeAllObjects];
       for (CFIndex j = 0, bundle_count = CFArrayGetCount(handlers); j < bundle_count; j++) {
         CFStringRef handler = CFArrayGetValueAtIndex(handlers, j);
         NSString *bundleId = (__bridge NSString *)handler;
-        // naive check
+        // todo: check signature instead
         if (appleOnly && ![bundleId hasPrefix:@"com.apple."])
           continue;
         [handlersForUrl addObject:bundleId];
