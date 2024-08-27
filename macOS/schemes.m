@@ -27,7 +27,6 @@ int main(int argc, const char *argv[]) {
       abort();
     }
 
-    NSMutableArray *handlersForUrl = [[NSMutableArray alloc] init];
     for (CFIndex i = 0, count = CFArrayGetCount(schemes); i < count; i++) {
       CFStringRef scheme = CFArrayGetValueAtIndex(schemes, i);
       NSString *str = (__bridge NSString *)scheme;
@@ -39,7 +38,7 @@ int main(int argc, const char *argv[]) {
 
       if (!handlers) continue;
 
-      [handlersForUrl removeAllObjects];
+      NSMutableArray *handlersForUrl = [[NSMutableArray alloc] init];
       for (CFIndex j = 0, bundle_count = CFArrayGetCount(handlers); j < bundle_count; j++) {
         CFStringRef handler = CFArrayGetValueAtIndex(handlers, j);
         NSString *bundleId = (__bridge NSString *)handler;
@@ -56,7 +55,12 @@ int main(int argc, const char *argv[]) {
           printf(" |-= %s (%s)\n", [bundleId UTF8String], [path UTF8String]);
         }
       }
+
+      CFRelease(handlers);
     }
+
+    if (schemes) CFRelease(schemes);
+    if (apps) CFRelease(apps);
   }
   return 0;
 }
