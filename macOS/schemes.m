@@ -51,8 +51,8 @@ int main(int argc, const char *argv[]) {
       if ([handlersForUrl count]) {
         printf("-+-= %s\n", [(__bridge NSString *)scheme UTF8String]);
         for (NSString *bundleId in handlersForUrl) {
-          NSString *path = [workspace absolutePathForAppBundleWithIdentifier:bundleId];
-          printf(" |-= %s (%s)\n", [bundleId UTF8String], [path UTF8String]);
+          NSURL *path = [workspace URLForApplicationWithBundleIdentifier:bundleId];
+          printf(" |-= %s (%s)\n", [bundleId UTF8String], [path fileSystemRepresentation]);
         }
       }
 
