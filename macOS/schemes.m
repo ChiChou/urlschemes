@@ -5,11 +5,43 @@
 
 #import <AppKit/AppKit.h>
 #import <Foundation/Foundation.h>
+#import <Security/Security.h>
 
 #include <stdio.h>
 
 extern OSStatus _LSCopySchemesAndHandlerURLs(CFArrayRef *outSchemes, CFArrayRef *outApps);
 extern OSStatus _LSCopyAllApplicationURLs(CFArrayRef *theList);
+
+BOOL isSignedByApple(NSURL *appURL) {
+  BOOL result = NO;
+
+  if (!appURL)
+    return NO;
+
+  SecStaticCodeRef staticCode = NULL;
+  OSStatus status = SecStaticCodeCreateWithPath((__bridge CFURLRef)appURL, kSecCSDefaultFlags, &staticCode);
+
+  if (status != errSecSuccess)
+    goto cleanup;
+
+  SecRequirementRef requirement = NULL;
+  status = SecRequirementCreateWithString(CFSTR("anchor apple"), kSecCSDefaultFlags, &requirement);
+
+  if (status != errSecSuccess)
+    goto cleanup;
+
+  status = SecStaticCodeCheckValidity(staticCode, kSecCSDefaultFlags, requirement);
+  result = (status == errSecSuccess);
+
+cleanup:
+
+  if (staticCode)
+    CFRelease(staticCode);
+  if (requirement)
+    CFRelease(requirement);
+
+  return result;
+}
 
 int main(int argc, const char *argv[]) {
   @autoreleasepool {
@@ -36,31 +68,38 @@ int main(int argc, const char *argv[]) {
       CFArrayRef handlers = LSCopyAllHandlersForURLScheme(scheme);
 #pragma clang diagnostic pop
 
-      if (!handlers) continue;
+      if (!handlers)
+        continue;
 
       NSMutableArray *handlersForUrl = [[NSMutableArray alloc] init];
       for (CFIndex j = 0, bundle_count = CFArrayGetCount(handlers); j < bundle_count; j++) {
         CFStringRef handler = CFArrayGetValueAtIndex(handlers, j);
         NSString *bundleId = (__bridge NSString *)handler;
-        // todo: check signature instead
-        if (appleOnly && ![bundleId hasPrefix:@"com.apple."])
-          continue;
+
+        if (appleOnly) {
+          NSURL *bundleURL = [workspace URLForApplicationWithBundleIdentifier:bundleId];
+          if (!bundleURL || !isSignedByApple(bundleURL))
+            continue;
+        }
+
         [handlersForUrl addObject:bundleId];
       }
 
       if ([handlersForUrl count]) {
-        printf("-+-= %s\n", [(__bridge NSString *)scheme UTF8String]);
+        printf("\n-+-= %s\n", [(__bridge NSString *)scheme UTF8String]);
         for (NSString *bundleId in handlersForUrl) {
-          NSURL *path = [workspace URLForApplicationWithBundleIdentifier:bundleId];
-          printf(" |-= %s (%s)\n", [bundleId UTF8String], [path fileSystemRepresentation]);
+          NSURL *bundleURL = [workspace URLForApplicationWithBundleIdentifier:bundleId];
+          printf(" |-= %s (%s)\n", [bundleId UTF8String], [bundleURL fileSystemRepresentation]);
         }
       }
 
       CFRelease(handlers);
     }
 
-    if (schemes) CFRelease(schemes);
-    if (apps) CFRelease(apps);
+    if (schemes)
+      CFRelease(schemes);
+    if (apps)
+      CFRelease(apps);
   }
   return 0;
 }
